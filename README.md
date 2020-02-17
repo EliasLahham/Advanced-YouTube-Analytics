@@ -27,6 +27,7 @@ To run:
 3. Replace the API key placeholder with your Google API key
 
 Need help getting a Google API key? [Click here](https://developers.google.com/youtube/v3/getting-started)
+
 *Depending on your API privileges, you are most likely limited to 500~ videos per day
 
 Face Detection Code by [shantnu](https://github.com/shantnu/FaceDetect), modified by Me
