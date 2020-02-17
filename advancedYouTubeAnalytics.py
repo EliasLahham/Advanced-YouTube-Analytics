@@ -53,16 +53,14 @@ def main():
 def channelAnalyzer(channels, numberOfVideos):
     count = 0
     for id in channels:
-        count = 0
         # Queries a YouTube search based on channel id
         channelSearch = yt.search(channel_id=id, max_results=numberOfVideos, order_by="date")
         # Stores metadata for each video in a list and beings analyzing
         for video in channelSearch:
             videoMetadata = yt.get_video_metadata(video_id=channelSearch[count]["video_id"])
             metadataAnalyzer(videoMetadata)
-            analyzerCounter += 1
             count += 1
-            print(f"{analyzerCounter}/{numberOfVideos * len(channels)} video(s) analyzed")
+            print(f"{count}/{numberOfVideos * len(channels)} video(s) analyzed")
 
 
 def searchQueryAnalyzer(query, numberOfVideos):
