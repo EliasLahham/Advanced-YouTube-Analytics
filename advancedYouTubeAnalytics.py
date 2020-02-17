@@ -8,29 +8,31 @@ from youtube_api import YouTubeDataAPI
 from urllib.request import urlopen
 import numpy as np
 
-key = <YOUR API KEY>
+key = [YOUR KEY]
 yt = YouTubeDataAPI(key)
-filename = ''
 
 
-def progStart():
-    fileName = str(path[-4])
+def main():
+    global path
+    path = str(path[-4])
     userInput = int(input("Type 0 for comparing channels\n"
                       "Type 1 for a YouTube search query\n"
                       "Type anything else to exit\n"
                       "> "))
 
+    if userInput != 0 and userInput != 1:
+        print(f'Input received -> "{userInput}" --- Exitting program...')
+        exit()
+
     # Ask user for number of videos to analyze and file name
     videosToAnalyze = int(input("How many videos do you want to analyze: "))
-    fileNameAddOn = input("Name of CSV file: ")
+    nameOfCSV = input("Name of CSV file: ")
 
-    # Handles user input with or without .csv attached
-    if not fileNameAddOn.endswith('.csv'):
-        fileNameAddOn = fileNameAddOn + ".csv"
+    if not nameOfCSV.endswith('.csv'):
+        nameOfCSV = nameOfCSV + ".csv"
 
-    fileName = fileName + "/" + fileNameAddOn
-    filename = fileName
-    createCSV(fileName)
+    path = path + "/" + nameOfCSV
+    createCSV(path)
 
     # Comparing channels
     if userInput == 0:
@@ -41,65 +43,61 @@ def progStart():
             if channelName.lower() == "done":
                 break
             channelList.append(channelName)
-        createCSV(fileName)
-        channelAnalyzer(channelList, videosToAnalyze, fileName)
+        channelAnalyzer(channelList, videosToAnalyze)
     elif userInput == 1:
         # YouTube search query
         searchQuery = input("Enter a YouTube Search Query: ")
-        searchQueryAnalyzer(searchQuery, videosToAnalyze, fileName)
-    else:
-        print(f'Input received -> "{userInput}" --- Exitting program...')
-        exit()
+        searchQueryAnalyzer(searchQuery, videosToAnalyze)
 
 
-def channelAnalyzer(channels, numOfVideos, filename):
-    analyzerCounter = 0
+def channelAnalyzer(channels, numberOfVideos):
+    count = 0
     for id in channels:
         count = 0
         # Queries a YouTube search based on channel id
-        channelSearch = yt.search(channel_id=id, max_results=numOfVideos, order_by="date")
-        # Stores metadata for each video in a list and calls CSV writer
+        channelSearch = yt.search(channel_id=id, max_results=numberOfVideos, order_by="date")
+        # Stores metadata for each video in a list and beings analyzing
         for video in channelSearch:
             videoMetadata = yt.get_video_metadata(video_id=channelSearch[count]["video_id"])
-            metadataAnalyzer(videoMetadata, filename)
+            metadataAnalyzer(videoMetadata)
             analyzerCounter += 1
             count += 1
-            print(f"{analyzerCounter}/{numOfVideos * len(channels)} video(s) analyzed")
+            print(f"{analyzerCounter}/{numberOfVideos * len(channels)} video(s) analyzed")
 
 
-def searchQueryAnalyzer(query, numOfVideos, filename):
+def searchQueryAnalyzer(query, numberOfVideos):
     count = 0
     # Queries a YouTube search based on a user's query
-    searchQuery = yt.search(q=query, max_results=numOfVideos, order_by="relevance")
+    searchQuery = yt.search(q=query, max_results=numberOfVideos, order_by="relevance")
     # Stores metadata for each video in a list and calls CSV writer
     for video in searchQuery:
         videoMetadata = yt.get_video_metadata(video_id=searchQuery[count]["video_id"])
-        metadataAnalyzer(videoMetadata, filename)
+        metadataAnalyzer(videoMetadata)
         count += 1
-        print(f"{count}/{numOfVideos} video(s) analyzed")
+        print(f"{count}/{numberOfVideos} video(s) analyzed")
 
 
-def metadataAnalyzer(metadata, filename):
-    videoLink = f"https://www.youtube.com/watch?v={metadata['video_id']}"
+def metadataAnalyzer(metadata):
+    videoLink = f'https://www.youtube.com/watch?v={metadata["video_id"]}'
     channelName = metadata["channel_title"]
     thumbnail = metadata["video_thumbnail"]
-    face = faceRecog(thumbnail)
+    isFaceInThumbnail = faceRecogonitionInThumbnail(thumbnail)
     title = metadata["video_title"]
-    titleLength, percentCap, questionCheck = titleChecker(title)
-    category = categoryConverter(str(metadata["video_category"]))
+    titleLength, capitalLetterPercentageInTitle, isQuestionMarkInTitle = getMetadataFromTitle(title)
+    category = youtubeCategoryConverter(str(metadata["video_category"]))
     views = metadata["video_view_count"]
     likes = metadata["video_like_count"]
     dislikes = metadata["video_dislike_count"]
     comments = metadata["video_comment_count"]
     if not metadata["video_tags"]:
-        tags = "False"
+        doTagsExists = str(False)
     else:
-        tags = "True"
-    metadataList = [channelName, category, videoLink, title, views, likes, dislikes, comments, face, titleLength, percentCap, questionCheck, tags]
-    csvWriter(metadataList, filename)
+        doTagsExists = str(True)
+    metadataList = [channelName, category, videoLink, title, views, likes, dislikes, comments, isFaceInThumbnail, titleLength, capitalLetterPercentageInTitle, isQuestionMarkInTitle, doTagsExists]
+    csvWriter(metadataList)
 
 
-def faceRecog(thumbnailUrl):
+def faceRecogonitionInThumbnail(thumbnailUrl):
     # Face Detection Code by shantnu, modified by Me
     # https://github.com/shantnu/FaceDetect
 
@@ -124,12 +122,11 @@ def faceRecog(thumbnailUrl):
     )
 
     if len(faces) > 0:
-        return "True"
+        return str(True)
     else:
-        return "False"
+        return str(False)
 
 
-# Converts a URL hosted image to a usable image in Python via a numpy array
 def url_to_image(url):
     resp = urlopen(url)
     imageArray = np.asarray(bytearray(resp.read()), dtype="uint8")
@@ -137,34 +134,29 @@ def url_to_image(url):
     return image
 
 
-# Gathers various data on the video's title
-def titleChecker(videoTitle):
-    capitalCount = 0
-    spaceCount = 0
-    percentCapital = ''
+def getMetadataFromTitle(videoTitle):
+    capitalLetterCount = 0
+    spaceCharCount = 0
 
-    # Length of title
     videoTitleLength = len(videoTitle.split())
 
-    # Checks if the title is a question or not
     if "?" in videoTitle:
-        questionMark = "True"
+        isQuestionMarkInTitle = str(True)
     else:
-        questionMark = "False"
+        isQuestionMarkInTitle = str(False)
 
-    # Calculates the percentage of capital letters in the title
     for char in videoTitle:
         if char.isupper():
-            capitalCount += 1
+            capitalLetterCount += 1
         elif char == " ":
-            spaceCount += 1
-    percent = (capitalCount / (len(videoTitle) - spaceCount)) * 100
-    percentCapital = str(round(percent, 2)) + "%"
-    return str(videoTitleLength), percentCapital, questionMark
+            spaceCharCount += 1
+
+    capitalLetterPercentage = str(round((capitalLetterCount / (len(videoTitle) - spaceCharCount)) * 100, 2)) + "%"
+    return videoTitleLength, capitalLetterPercentage, isQuestionMarkInTitle
 
 
-def categoryConverter(videoCategory):
-    # Predetermined values via YouTube
+def youtubeCategoryConverter(videoCategory):
+    # Predetermined values for video categories
     videoCategories = {
         "1": "Film & Animation",
         "2": "Auto & Vehicles",
@@ -210,30 +202,32 @@ def createCSV(file):
     with open(file, 'w', newline='') as csvfile:
         filewriter = csv.writer(csvfile)
         filewriter.writerow(["Channel Name", "Category", "Video Link", "Title", "View Count", "Likes", "Dislikes", "Comments", "Face?", "Title Length", "Title Capital Percentage", "Title Question", "Tags?"])
+    print("Blank CSV file with headers created...")
 
 
-# Writes metadata to CSV via given list
-def csvWriter(list, file):
-        with open(file, 'a', encoding='utf-8') as csvfile:
+# Writes metadata to CSV
+def csvWriter(videoMetadata):
+        with open(path, 'a', encoding='utf-8') as csvfile:
             filewriter = csv.writer(csvfile, lineterminator='\n')
             try:
-                filewriter.writerow(list)
+                filewriter.writerow(videoMetadata)
             except UnicodeEncodeError:
-                list[3] = "Invalid Title"
-                filewriter.writerow(list)
+                # Occurs when various Emojis are in title
+                videoMetadata[3] = "Invalid Title"
+                filewriter.writerow(videoMetadata)
 
 
-progStart()
+main()
 while 1:
     userDecision = input("Analysis Complete\n"
-                         "Type yes to run again\n"
                          "Type open to open project folder\n"
+                         "Type yes to run again\n"
                          "Type no to exit program\n"
                          "> ")
     if userDecision.lower() == "yes":
         progStart()
     elif userDecision.lower() == "open":
-        os.startfile(filename)
+        os.startfile(path)
         exit()
     else:
         exit()
