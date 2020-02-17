@@ -1,4 +1,4 @@
-# AdvancedYouTubeAnalytics
+# Advanced YouTube Analytics
 
 This script will utilize YouTube's Data API v3 to gather metadata from search queries and videos from channels depending on user input. In addition to the metadata provided by the API, I've added a few more fields to fill out like checking for faces in thumbnails, title length, is the title a question, and title capital letter percentage. All metadata will be exported to a CSV file which can be easily viewable in Excel.
 
