@@ -223,7 +223,7 @@ while 1:
                          "Type no to exit program\n"
                          "> ")
     if userDecision.lower() == "yes":
-        progStart()
+        main()
     elif userDecision.lower() == "open":
         os.startfile(path)
         exit()
